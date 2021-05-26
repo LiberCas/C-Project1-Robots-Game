@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <chrono>
+#include <cstddef>
 using namespace std;
 
 double const PI = 3.1415926;
@@ -16,7 +18,7 @@ public:
 	int Hj;
 	char Hdead;
 
-	Person(int i=0, int j=0, char dead = 'H') {
+	Person(int i = 0, int j = 0, char dead = 'H') {
 		Hi = i;
 		Hj = j;
 		Hdead = dead;
@@ -60,12 +62,12 @@ void checkDeathHero(Person& hero, vector< vector <char> > maze) {
 	}
 }
 
-void moveRobots(Person hero, vector< vector <char> > &maze, vector< vector <int> > &robotList) {
+void moveRobots(Person hero, vector< vector <char> >& maze, vector< vector <int> >& robotList) {
 	int i = 0;
 	while (i < robotList.size()) {
 		//Finding the shortest way to the hero
-		float y=hero.Hi - robotList[i][0], x=hero.Hj - robotList[i][1], angle;
-		angle = 180 * acos(x / sqrt((x * x) + (y * y)))/PI;
+		float y = hero.Hi - robotList[i][0], x = hero.Hj - robotList[i][1], angle;
+		angle = 180 * acos(x / sqrt((x * x) + (y * y))) / PI;
 		if (y < 0)
 			angle = 360 - angle;
 		maze[robotList[i][0]][robotList[i][1]] = ' ';
@@ -122,7 +124,7 @@ void moveRobots(Person hero, vector< vector <char> > &maze, vector< vector <int>
 			maze[robotList[i][0]][robotList[i][1]] = 'r';
 			//col_loc = coordinates of the collision
 			vector <int> col_loc = robotList[i];
-			int col_index=0;
+			int col_index = 0;
 			//Removing the current robot from the array
 			for (int index = i; index < robotList.size() - 1; index++) {
 				robotList[index] = robotList[index + 1];
@@ -151,7 +153,71 @@ void moveRobots(Person hero, vector< vector <char> > &maze, vector< vector <int>
 	}
 }
 
-bool play(vector <vector<char>> &maze, Person &hero, vector <vector <int>> &robotList) {
+void SortFile(string file) {
+	int a = 0;
+	ifstream winners(file, ios::in);
+	string s;
+
+	class players {
+	public:
+		string name;
+		int tempo;
+
+	};
+	int b = 0;
+	string delim = "-";
+	string token;
+	string discard;
+	size_t pos = 0;
+	vector<players> jogadores;
+	getline(winners, discard);
+	getline(winners, discard);
+	while (!winners.eof()) {
+		getline(winners, s);
+		jogadores.push_back(players());
+		pos = 0;
+		pos = s.find_first_of(delim, 0);
+		jogadores[b].name = s.substr(0, pos);
+		while (jogadores[b].name.length() < 15) {
+			jogadores[b].name = jogadores[b].name + " ";
+		}
+		while (jogadores[b].name.length() > 15) {
+			jogadores[b].name.resize(15);
+		}
+		token = s.erase(0, pos + delim.length());
+		jogadores[b].tempo = stoi(token);
+		a++;
+		b++;
+
+	}
+	winners.close();
+	ifstream winnerst;
+	winnerst.open(file, std::ifstream::out | std::ifstream::trunc);
+	winnerst.close();
+	int i, j, temp;
+	for (i = 0; i < a; i++) {
+		for (j = i; j < a; j++) {
+			if (jogadores[i].tempo > jogadores[j].tempo) {
+				temp = jogadores[i].tempo;
+				token = jogadores[i].name;
+				jogadores[i].tempo = jogadores[j].tempo;
+				jogadores[i].name = jogadores[j].name;
+				jogadores[j].tempo = temp;
+				jogadores[j].name = token;
+			}
+		}
+	}
+	ofstream winnerw(file, ios::app);
+	winnerw << "Player       –    Time\n" << "----------------------";
+	for (i = 0; i < a; i++) {
+		winnerw << endl << jogadores[i].name << " - " << setw(3) << jogadores[i].tempo;
+	}
+	winnerw.close();
+}
+
+bool play(vector <vector<char>>& maze, Person& hero, vector <vector <int>>& robotList, string& number) {
+	auto start = chrono::steady_clock::now();
+	chrono::steady_clock::time_point end;
 	while (true) {
 		resetScreen();
 		char movement;
@@ -204,9 +270,43 @@ bool play(vector <vector<char>> &maze, Person &hero, vector <vector <int>> &robo
 			cout << "You have been electrecuted by the fence!\n";
 		else
 			cout << "You have been caught by a robot!\n";
+		end = chrono::steady_clock::now();
+
 	}
-	else
-		cout << "GameOver, you WON!\n";
+	else {
+
+		end = chrono::steady_clock::now();
+		string name;
+		cin.ignore();
+		cout << "GameOver, you WON!\n" << "Now write your name and in the leaderboard!\n";
+		while (true) {
+			getline(cin, name);
+			if (name.length() > 15) {
+				cout << "Name must be less than 15 characters:\n";
+			}
+			else {
+				break;
+			}
+		}
+		ifstream maze_t("MAZE_" + number + "_WINNERS.txt");
+		if (maze_t) {
+			ofstream maze_winners("MAZE_" + number + "_WINNERS.txt", ios::app);
+			maze_winners << endl << name << " - " << chrono::duration_cast<chrono::seconds>(end - start).count();
+			maze_winners.close();
+			string file_name = "MAZE_" + number + "_WINNERS.txt";
+			SortFile(file_name);
+		}
+		else {
+			ofstream maze_winners("MAZE_" + number + "_WINNERS.txt", ios::app);
+			maze_winners << "Player       –    Time\n" << "----------------------";
+			maze_winners << endl << name << " - " << chrono::duration_cast<chrono::seconds>(end - start).count();
+			maze_winners.close();
+			string file_name = "MAZE_" + number + "_WINNERS.txt";
+			SortFile(file_name);
+		}
+	}
+
+
 	return 1;
 }
 
@@ -219,50 +319,50 @@ bool playSelect() {
 	int n_lines, n_cols;
 	resetScreen();
 	cout << "Which maze would you like to use:\n";
-	cin >> number;
-	if (cin.eof())
-		return 0;
-	maze_file.open("MAZE_" + number + ".txt");
-	resetScreen();
+	while (true) {
+		cin >> number;
+		if (cin.eof() || number == "0")
+			return 1;
+		maze_file.open("MAZE_" + number + ".txt");
+		resetScreen();
+		if (maze_file.is_open())
+			break;
+		else
+			cout << "Unable to open file. Please input a valid file number:\n";
+	}
 	//Extracting the contents of the maze file
-	if (maze_file.is_open()) {
-		//Extracting the dimentions of the maze
-		maze_file >> n_lines;
-		maze_file.ignore(3);
-		maze_file >> n_cols;
-		maze_file.ignore(1);
-		vector <vector <char>> maze(n_lines, vector<char>(n_cols));
-		int nRobots = 0;
-		//Extracting the actual maze to the vector \"maze\"
-		for (int i = 0; i < maze.size(); i++) {
-			string line;
-			getline(maze_file, line);
-			for (int j = 0; j < line.size(); j++) {
-				//Extracting the location of the hero to the variable \"hero\"
-				if (line[j] == 'H') {
-					hero.Hi = i;
-					hero.Hj = j;
-					maze[i][j] = ' ';
-				}
-				else if (line[j] == 'R') {
-					//Extracting the locations of the Robots to the vector robotList, in this way, the robots are arranged sequentially
-					nRobots++;
-					robotList.push_back(vector<int>(1));
-					robotList[nRobots - 1].resize(2);
-					robotList[nRobots - 1][0] = i;
-					robotList[nRobots - 1][1] = j;
-					maze[i][j] = line[j];
-				}
-				else
-					maze[i][j] = line[j];
+	//Extracting the dimentions of the maze
+	maze_file >> n_lines;
+	maze_file.ignore(3);
+	maze_file >> n_cols;
+	maze_file.ignore(1);
+	vector <vector <char>> maze(n_lines, vector<char>(n_cols));
+	int nRobots = 0;
+	//Extracting the actual maze to the vector \"maze\"
+	for (int i = 0; i < maze.size(); i++) {
+		string line;
+		getline(maze_file, line);
+		for (int j = 0; j < line.size(); j++) {
+			//Extracting the location of the hero to the variable \"hero\"
+			if (line[j] == 'H') {
+				hero.Hi = i;
+				hero.Hj = j;
+				maze[i][j] = ' ';
 			}
+			else if (line[j] == 'R') {
+				//Extracting the locations of the Robots to the vector robotList, in this way, the robots are arranged sequentially
+				nRobots++;
+				robotList.push_back(vector<int>(1));
+				robotList[nRobots - 1].resize(2);
+				robotList[nRobots - 1][0] = i;
+				robotList[nRobots - 1][1] = j;
+				maze[i][j] = line[j];
+			}
+			else
+				maze[i][j] = line[j];
 		}
-		return (play(maze, hero, robotList));
 	}
-	else {
-		cout << "Unable to open file\n\n";
-		return 1;
-	}
+	return (play(maze, hero, robotList, number));
 }
 
 bool rules() {
@@ -273,8 +373,7 @@ bool rules() {
 		cin >> selection;
 		if (cin.eof())
 			return 0;
-	}
-	while (selection != 0);
+	} while (selection != 0);
 	resetScreen();
 	return 1;
 }
@@ -295,6 +394,7 @@ void mainMenu() {
 		}
 		else if (selection == 0)
 			break;
+		resetScreen();
 	}
 }
 

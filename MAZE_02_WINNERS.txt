@@ -1,0 +1,9 @@
+Player       –    Time
+----------------------
+Carlos          -   2
+Igor            -   2
+Lucas           -   2
+Joana           -   2
+Lucas           -   2
+Paulo Miguel    -   4
+Igor            -   8
